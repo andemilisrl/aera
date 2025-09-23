@@ -63,16 +63,34 @@ If initial tests with ÆRA prove successful, organizations can then invest in de
 - **Deployment**: Optimized for local deployment on standard hardware
 - **Privacy**: Runs entirely on-premises with no external API calls
 
+## Precision & Memory
+
+- Recommended: GPU with bfloat16 or float16.
+- If you don’t set `torch_dtype`, many setups will load float32 on CPU → higher RAM usage and slower inference.
+- If you don’t pass `device_map="auto"`, the model may not use your GPU.
+- Best practice: load on GPU with `torch_dtype=torch.bfloat16` (or `torch.float16`) and `device_map="auto"`. Total runtime memory is higher than weights alone due to buffers and KV-cache and scales with context length and batch size.
+
+### GGUF weights for local runtimes
+
+[GGUF 4-bit weights](https://huggingface.co/and-emili/aera-4b-GGUF) are available for local runners like LM Studio, Ollama, and llama.cpp.
+
 ## Getting Started
 
 ### Using Pipeline (Simplest)
 ```python
 from transformers import pipeline
+import torch
 
-pipe = pipeline("text-generation", model="and-emili/aera-4b")
-messages = [
-    {"role": "user", "content": "Chi sei?"},
-]
+pipe = pipeline(
+    "text-generation",
+    model="and-emili/aera-4b",
+    model_kwargs={
+        "torch_dtype": torch.bfloat16,  # or torch.float16 if preferred
+        "low_cpu_mem_usage": True,
+        "device_map": "auto",
+    },
+)
+messages = [{"role": "user", "content": "Chi sei?"}]
 answer = pipe(messages)[0]['generated_text'][-1]['content']
 
 print(answer) 
@@ -82,9 +100,15 @@ print(answer)
 ### Direct Model Loading
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 
-tokenizer = AutoTokenizer.from_pretrained("and-emili/aera-4b")
-model = AutoModelForCausalLM.from_pretrained("and-emili/aera-4b")
+tokenizer = AutoTokenizer.from_pretrained("and-emili/aera-4b", use_fast=True)
+model = AutoModelForCausalLM.from_pretrained(
+    "and-emili/aera-4b",
+    torch_dtype=torch.bfloat16,  # or torch.float16
+    device_map="auto",
+    low_cpu_mem_usage=True,
+)
 
 messages = [
     {"role": "user", "content": "Chi è L'attuale presidente della Repubblica Italiana?"},
@@ -98,7 +122,7 @@ inputs = tokenizer.apply_chat_template(
 ).to(model.device)
 
 outputs = model.generate(**inputs, max_new_tokens=400)
-print(tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:]))
+print(tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True))
 # Output: 'Al momento non ho informazioni aggiornate sull'attuale presidente della Repubblica Italiana. 
 #         Se hai un testo o dei dati specifici che vuoi condividere, posso aiutarti a estrarre questa informazione.'
 ```
@@ -106,8 +130,17 @@ print(tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:]))
 ### RAG-Style Context Analysis
 ```python
 from transformers import pipeline
+import torch
 
-pipe = pipeline("text-generation", model="and-emili/aera-4b")
+pipe = pipeline(
+    "text-generation",
+    model="and-emili/aera-4b",
+    model_kwargs={
+        "torch_dtype": torch.bfloat16,
+        "low_cpu_mem_usage": True,
+        "device_map": "auto",
+    },
+)
 
 # Document/context
 document = """
