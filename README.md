@@ -1,5 +1,11 @@
 # ÆRA-4B
 
+<div align="center">
+
+[🚀 **Try Demo**](https://aera.andemili.com/) | [🤗 **Hugging Face**](https://huggingface.co/and-emili/aera-4b)
+
+</div>
+
 ## Overview
 
 ÆRA is a specialized 4 billion parameter language model developed by [AND EMILI](https://www.andemili.com/) as an enterprise-focused foundation for building intelligent agents and automation pipelines. Unlike general-purpose conversational models, ÆRA is intentionally designed with a narrow, practical focus on context-based reasoning and structured outputs.
